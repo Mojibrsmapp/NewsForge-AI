@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Search, TrendingUp, ArrowRight, Loader2, Newspaper, ExternalLink, Sparkles } from "lucide-react";
+import { Search, TrendingUp, ArrowRight, Loader2, Newspaper, ExternalLink, Sparkles, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -39,8 +39,20 @@ export default function Research() {
   };
 
   const handleForge = (news: NewsItem) => {
-    // Navigate to editor with news context
-    navigate("/editor", { state: { newsContext: JSON.stringify(news) } });
+    // Pass the primary news item AND the snippets of other results as supporting context
+    const supportingContext = results
+      .filter(r => r.link !== news.link)
+      .slice(0, 5) // Take top 5 other relevant snippets
+      .map(r => `[Secondary Source: ${r.source}] ${r.title}: ${r.snippet}`)
+      .join("\n\n");
+
+    const payload = {
+      primary: news,
+      supporting: supportingContext,
+      query: query // The original search query helps ground the topic
+    };
+
+    navigate("/editor", { state: { newsContext: JSON.stringify(payload) } });
   };
 
   return (
@@ -111,12 +123,19 @@ export default function Research() {
                 )}
                 
                 <div className="flex-1 space-y-3">
-                  <div className="flex justify-between items-start">
-                    <span className="text-xs font-bold text-[#00E0FF] uppercase tracking-wider px-2 py-0.5 rounded bg-[#00E0FF]/10">{item.source}</span>
-                    <span className="text-xs font-mono text-gray-500 uppercase tracking-widest">{item.date}</span>
+                  <div className="flex justify-between items-center bg-[#0B0F14]/40 px-3 py-2 rounded-xl border border-white/5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-[#00E0FF] uppercase tracking-wider">{item.source}</span>
+                      <div className="w-1 h-1 rounded-full bg-gray-700" />
+                      <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest">{item.date}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[10px] font-mono text-amber-500/80 bg-amber-500/5 px-2 py-0.5 rounded border border-amber-500/10">
+                      <Zap className="w-3 h-3" />
+                      FRESH
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold text-white group-hover:text-[#00E0FF] transition-colors line-clamp-2">{item.title}</h3>
-                  <p className="text-gray-400 text-sm line-clamp-2">{item.snippet}</p>
+                  <h3 className="text-xl font-bold text-white group-hover:text-[#00E0FF] transition-colors line-clamp-2 leading-snug">{item.title}</h3>
+                  <p className="text-gray-400 text-sm line-clamp-2 leading-relaxed">{item.snippet}</p>
                   
                   <div className="pt-4 flex items-center gap-4">
                     <button 

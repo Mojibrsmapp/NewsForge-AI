@@ -2,20 +2,39 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-export async function generateNewsArticle(newsContext: string, language: "Bangla" | "English" = "Bangla") {
-  const systemInstruction = `You are NewsForge AI, an expert SEO news writer and editor. 
-Your task is to generate a high-quality, professional news article based on the provided news context.
-- Format the output in JSON.
-- Style: Inverted Pyramid Style.
-- Tone: Human-like, professional.
-- Language: ${language}.
-- Include: Title, Meta Description, SEO Slug, Labels (categories), and HTML Content.
-- HTML content should include an introductory paragraph, subheadings (h2), bullet points if relevant, and a conclusion.
-- Ensure the title and meta description are SEO-optimized.`;
+export async function generateNewsArticle(newsContextJson: string, language: "Bangla" | "English" = "Bangla") {
+  const context = JSON.parse(newsContextJson);
+  const primaryNews = context.primary;
+  const supporting = context.supporting;
+  const originalQuery = context.query;
+
+  const currentDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  
+  const systemInstruction = `You are NewsForge AI, a top-tier SEO news writer. 
+Current Date: ${currentDate}.
+Target Topic: ${originalQuery}.
+
+STRICT CONTENT RULES:
+1. SOURCE GROUNDING: You must generate the article based ONLY on the provided Context.
+2. PRIORITY: The "Primary Source" details are the most important. Use "Supporting Context" only to add depth or verify facts.
+3. LOCAL FOCUS: Do NOT mention unrelated international events or other countries unless they are explicitly in the source data.
+4. NO HALLUCINATION: If a detail isn't in the context, don't invent it. Use the provided snippet and title to forge a cohesive narrative.
+5. STYLE: Inverted Pyramid Style. Professional, human-like journalistic tone.
+6. LANGUAGE: Generate in ${language}.
+7. FORMAT: Return valid JSON matching the schema.
+
+PRIMARY SOURCE:
+Title: ${primaryNews.title}
+Source: ${primaryNews.source}
+Snippet: ${primaryNews.snippet}
+
+SUPPORTING RESEARCH DATA:
+${supporting}
+`;
 
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
-    contents: `News Context: ${newsContext}`,
+    contents: `Please generate a news article about "${primaryNews.title}" using the provided context.`,
     config: {
       systemInstruction,
       responseMimeType: "application/json",
