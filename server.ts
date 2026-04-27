@@ -15,7 +15,20 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  app.set("trust proxy", 1);
   app.use(express.json());
+
+  // Request logging
+  app.use((req, res, next) => {
+    console.log(`${req.method} ${req.url}`);
+    next();
+  });
+
+  // Health check/Ping
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
   app.use(
     cookieSession({
       name: "session",
@@ -29,7 +42,7 @@ async function startServer() {
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    `${process.env.APP_URL}/auth/callback`
+    `${(process.env.APP_URL || "").replace(/\/$/, "")}/auth/callback`
   );
 
   // Auth Routes
@@ -152,6 +165,20 @@ async function startServer() {
       console.error("Blogger publish error", error);
       res.status(500).json({ error: "Failed to publish post" });
     }
+  });
+
+  // Diagnostic route
+  app.get("/api/debug-env", (req, res) => {
+    res.json({
+      NODE_ENV: process.env.NODE_ENV,
+      hasSerperKey: !!process.env.SERPER_API_KEY,
+      hasGeminiKey: !!process.env.GEMINI_API_KEY,
+      hasGoogleId: !!process.env.GOOGLE_CLIENT_ID,
+    });
+  });
+
+  app.use("/api/*", (req, res) => {
+    res.status(404).json({ error: `API route ${req.originalUrl} not found` });
   });
 
   // Vite middleware
